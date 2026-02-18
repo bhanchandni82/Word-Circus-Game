@@ -156,19 +156,17 @@
     </div>
 
     <script>
-        // --- AUDIO ENGINE: GITHUB VERSION ---
-        // These point to the folder structure we discussed in the guide.
+        // --- AUDIO ENGINE: WAV VERSION ---
         const AUDIO_FILES = {
-            click: './assets/sounds/click.mp3',
-            reveal: './assets/sounds/reveal.mp3',
-            correct: './assets/sounds/correct.mp3',
-            wrong: './assets/sounds/wrong.mp3',
-            coin: './assets/sounds/coin.mp3'
+            click: './assets/sounds/click.wav',
+            reveal: './assets/sounds/reveal.wav',
+            correct: './assets/sounds/correct.wav',
+            wrong: './assets/sounds/wrong.wav',
+            coin: './assets/sounds/coin.wav'
         };
 
         const audioObjects = {};
         
-        // Pre-load all audio objects
         Object.keys(AUDIO_FILES).forEach(key => {
             audioObjects[key] = new Audio(AUDIO_FILES[key]);
             audioObjects[key].load();
@@ -177,9 +175,8 @@
         function playSound(key) {
             const sound = audioObjects[key];
             if (sound) {
-                sound.currentTime = 0; // Rewind to start for overlapping sounds
+                sound.currentTime = 0;
                 sound.play().catch(e => {
-                    // Browser might block audio if user hasn't clicked anything yet.
                     console.log("Audio waiting for interaction.");
                 });
             }
@@ -311,15 +308,12 @@
 
         function startGame() {
             playSound('click');
-            
             document.getElementById('screen-menu').style.display = 'none';
             document.getElementById('hud').style.display = 'flex';
             document.getElementById('progress-container').style.display = 'block';
             document.getElementById('screen-play').style.display = 'flex';
-            
             const shuffled = shuffle([...ALL_QUESTIONS]);
             state.sessionQuestions = shuffled.slice(0, 30);
-            
             initRound();
         }
 
@@ -341,7 +335,6 @@
             container.innerHTML = '';
             const totalInBar = state.isBonusRound ? state.missedQuestions.length : 10;
             const currentOffset = state.isBonusRound ? state.currentIndex : (state.currentIndex % 10);
-
             for (let i = 0; i < totalInBar; i++) {
                 const dot = document.createElement('div');
                 const isCompleted = i < currentOffset;
@@ -354,45 +347,33 @@
         function loadQuestion() {
             const qSet = state.isBonusRound ? state.missedQuestions : state.sessionQuestions;
             const q = qSet[state.currentIndex];
-            
             if (!q) return showGameOver();
-
             state.canAnswer = false;
-            
             const c1 = document.getElementById('curtain-1');
             const c2 = document.getElementById('curtain-2');
             c1.classList.remove('curtain-opened');
             c2.classList.remove('curtain-opened');
-            
             document.getElementById('explanation').classList.add('hidden');
             document.getElementById('next-btn').classList.add('hidden');
             document.getElementById('skip-btn').style.visibility = 'visible';
-
             setTimeout(() => {
                 document.getElementById('box1-text').innerText = q.box1;
                 document.getElementById('box2-text').innerText = q.box2;
-                
-                playSound('reveal'); // Trigger local curtain sound
-                
+                playSound('reveal');
                 c1.classList.add('curtain-opened');
                 setTimeout(() => {
                     c2.classList.add('curtain-opened');
                     state.canAnswer = true;
                 }, 300);
             }, 400);
-
             const optionsGrid = document.getElementById('options-grid');
             optionsGrid.innerHTML = '';
-            
             const shuffledOptions = shuffle([...q.options]);
-            
             shuffledOptions.forEach(opt => {
                 const btn = document.createElement('button');
-                
                 let fontSizeClass = "text-sm sm:text-base md:text-xl";
                 if (opt.length > 8) fontSizeClass = "text-[10px] sm:text-xs md:text-sm lg:text-base";
                 else if (opt.length > 6) fontSizeClass = "text-xs sm:text-sm md:text-lg";
-
                 btn.className = `btn-bounce fit-text bg-indigo-800 hover:bg-indigo-700 h-16 sm:h-20 px-2 rounded-2xl border-b-4 border-indigo-950 circus-font ${fontSizeClass} transition-all shadow-lg text-white leading-none`;
                 btn.innerText = opt;
                 btn.onclick = () => {
@@ -406,44 +387,35 @@
         function handleAnswer(choice, btn) {
             if (!state.canAnswer) return;
             state.canAnswer = false;
-
             const qSet = state.isBonusRound ? state.missedQuestions : state.sessionQuestions;
             const q = qSet[state.currentIndex];
             const isCorrect = choice === q.correct;
-
             document.getElementById('skip-btn').style.visibility = 'hidden';
-
             if (isCorrect) {
-                playSound('correct'); // Trigger local success sound
+                playSound('correct');
                 btn.classList.remove('bg-indigo-800', 'border-indigo-950');
                 btn.classList.add('bg-green-500', 'border-green-700', 'gold-glow');
                 const points = state.isBonusRound ? 0.5 : 1;
                 state.score += points;
                 state.money += points * 0.10;
-                
-                setTimeout(() => playSound('coin'), 300); // Trigger local money sound
-                
+                setTimeout(() => playSound('coin'), 300);
                 createConfetti();
                 showFeedback(q.explanation);
                 setTimeout(() => nextQuestion(), 1500);
             } else {
-                playSound('wrong'); // Trigger local fail sound
+                playSound('wrong');
                 btn.classList.add('bg-red-500', 'border-red-700');
-                
                 const buttons = document.querySelectorAll('#options-grid button');
                 buttons.forEach(b => {
                     if (b.innerText === q.correct) {
                         b.classList.add('bg-green-500', 'border-green-700', 'scale-105');
                     }
                 });
-                
                 if (!state.isBonusRound && !state.missedQuestions.find(mq => mq.id === q.id)) {
                     state.missedQuestions.push(q);
                 }
-                
                 showFeedback(q.explanation);
-                speakText(q.explanation); 
-                
+                speakText(q.explanation);
                 document.getElementById('next-btn').classList.remove('hidden');
             }
             updateHUD();
