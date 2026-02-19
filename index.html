@@ -112,6 +112,9 @@
 
         <!-- PLAY AREA -->
         <div id="screen-play" class="hidden flex-1 flex flex-col p-4 relative overflow-hidden">
+            <!-- HEADLINE INSTRUCTION -->
+            <h2 class="circus-font text-xl md:text-2xl text-yellow-400 text-center mb-4 uppercase tracking-wide">Find ONE word that correctly matches BOTH clue boxes</h2>
+
             <!-- Question Boxes -->
             <div class="flex-1 flex gap-3 md:gap-4 items-center justify-center mb-4 min-h-0">
                 <!-- Box 1 -->
@@ -313,13 +316,11 @@
             document.getElementById('progress-container').style.display = 'block';
             document.getElementById('screen-play').style.display = 'flex';
             const shuffled = shuffle([...ALL_QUESTIONS]);
-            // Logic change: test is now only 10 questions long
             state.sessionQuestions = shuffled.slice(0, 10);
             initRound();
         }
 
         function initRound() {
-            // Test is 10 questions total, so current index tracks the set of 10
             state.currentIndex = (state.round - 1) * 10;
             updateHUD();
             renderProgressBar();
@@ -335,7 +336,6 @@
         function renderProgressBar() {
             const container = document.querySelector('#progress-container div');
             container.innerHTML = '';
-            // Bar is always 10 dots long now
             const totalInBar = state.isBonusRound ? state.missedQuestions.length : 10;
             const currentOffset = state.isBonusRound ? state.currentIndex : (state.currentIndex % 10);
             for (let i = 0; i < totalInBar; i++) {
@@ -400,7 +400,6 @@
                 btn.classList.add('bg-green-500', 'border-green-700', 'gold-glow');
                 const points = state.isBonusRound ? 0.5 : 1;
                 state.score += points;
-                // Logic change: each correct answer is £0.10, so 10/10 = £1.00
                 state.money += points * 0.10;
                 setTimeout(() => playSound('coin'), 300);
                 createConfetti();
@@ -445,7 +444,6 @@
         function nextQuestion() {
             const qSet = state.isBonusRound ? state.missedQuestions : state.sessionQuestions;
             state.currentIndex++;
-            // Check if they finished the 10th question
             if (!state.isBonusRound && state.currentIndex % 10 === 0) {
                 showRoundResults();
             } else if (state.isBonusRound && state.currentIndex >= state.missedQuestions.length) {
@@ -466,7 +464,6 @@
             title.innerText = `SHOW COMPLETE!`;
             text.innerHTML = `Great performance! You've earned <strong>£${state.money.toFixed(2)}</strong>.<br>Let's see if there's an encore...`;
             
-            // Logic change: only 1 round of 10 now
             state.round++;
             if (state.round > 1) { 
                 if (state.missedQuestions.length > 0) {
