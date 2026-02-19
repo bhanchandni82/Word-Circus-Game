@@ -82,7 +82,7 @@
             <p class="text-lg md:text-2xl italic mb-10 text-white font-medium px-4">"Step right up! These words have TWO tricks!"</p>
             
             <div class="bg-red-600 px-6 py-4 md:px-8 md:py-5 rounded-3xl border-4 border-yellow-400 shadow-xl mb-12 transform -rotate-1">
-                <p class="circus-font text-xl md:text-3xl text-white uppercase">Earn up to £3.00 per show!</p>
+                <p class="circus-font text-xl md:text-3xl text-white uppercase">Earn up to £1.00 per show!</p>
             </div>
 
             <button onclick="startGame()" class="btn-bounce bg-yellow-400 hover:bg-yellow-300 text-red-700 circus-font text-3xl md:text-5xl px-12 py-4 md:px-16 md:py-5 rounded-full border-b-8 border-yellow-600 transition-all shadow-2xl">
@@ -96,7 +96,7 @@
                 <span class="text-[10px] uppercase opacity-70">Earnings</span>
                 <span id="display-money" class="text-yellow-400 font-bold text-lg md:text-xl">£0.00</span>
             </div>
-            <div id="round-title" class="circus-font text-sm md:text-xl text-white">ROUND 1</div>
+            <div id="round-title" class="circus-font text-sm md:text-xl text-white">THE SHOW</div>
             <div class="flex flex-col items-end">
                 <span class="text-[10px] uppercase opacity-70">Score</span>
                 <span id="display-score" class="font-bold text-lg md:text-xl">0</span>
@@ -313,11 +313,13 @@
             document.getElementById('progress-container').style.display = 'block';
             document.getElementById('screen-play').style.display = 'flex';
             const shuffled = shuffle([...ALL_QUESTIONS]);
-            state.sessionQuestions = shuffled.slice(0, 30);
+            // Logic change: test is now only 10 questions long
+            state.sessionQuestions = shuffled.slice(0, 10);
             initRound();
         }
 
         function initRound() {
+            // Test is 10 questions total, so current index tracks the set of 10
             state.currentIndex = (state.round - 1) * 10;
             updateHUD();
             renderProgressBar();
@@ -327,12 +329,13 @@
         function updateHUD() {
             document.getElementById('display-score').innerText = state.score;
             document.getElementById('display-money').innerText = `£${state.money.toFixed(2)}`;
-            document.getElementById('round-title').innerText = state.isBonusRound ? "BONUS ENCORE" : `ROUND ${state.round}`;
+            document.getElementById('round-title').innerText = state.isBonusRound ? "BONUS ENCORE" : `THE SHOW`;
         }
 
         function renderProgressBar() {
             const container = document.querySelector('#progress-container div');
             container.innerHTML = '';
+            // Bar is always 10 dots long now
             const totalInBar = state.isBonusRound ? state.missedQuestions.length : 10;
             const currentOffset = state.isBonusRound ? state.currentIndex : (state.currentIndex % 10);
             for (let i = 0; i < totalInBar; i++) {
@@ -397,6 +400,7 @@
                 btn.classList.add('bg-green-500', 'border-green-700', 'gold-glow');
                 const points = state.isBonusRound ? 0.5 : 1;
                 state.score += points;
+                // Logic change: each correct answer is £0.10, so 10/10 = £1.00
                 state.money += points * 0.10;
                 setTimeout(() => playSound('coin'), 300);
                 createConfetti();
@@ -441,6 +445,7 @@
         function nextQuestion() {
             const qSet = state.isBonusRound ? state.missedQuestions : state.sessionQuestions;
             state.currentIndex++;
+            // Check if they finished the 10th question
             if (!state.isBonusRound && state.currentIndex % 10 === 0) {
                 showRoundResults();
             } else if (state.isBonusRound && state.currentIndex >= state.missedQuestions.length) {
@@ -458,10 +463,12 @@
             const btn = document.getElementById('results-btn');
             const icon = document.getElementById('results-icon');
             icon.innerText = "🎪";
-            title.innerText = `ROUND ${state.round} COMPLETE!`;
-            text.innerHTML = `Great show! You've earned <strong>£${state.money.toFixed(2)}</strong> so far.<br>Take a breath, the next act is even better!`;
+            title.innerText = `SHOW COMPLETE!`;
+            text.innerHTML = `Great performance! You've earned <strong>£${state.money.toFixed(2)}</strong>.<br>Let's see if there's an encore...`;
+            
+            // Logic change: only 1 round of 10 now
             state.round++;
-            if (state.round > 3) {
+            if (state.round > 1) { 
                 if (state.missedQuestions.length > 0) {
                     title.innerText = "THE ENCORE!";
                     icon.innerText = "⭐";
