@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Word Circus</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #1a0b2e;
+            color: white;
+            overflow: hidden;
+            touch-action: manipulation;
+        }
+        .circus-font { font-family: 'Bungee', cursive; }
+        
+        .tent-bg {
+            background: repeating-linear-gradient(
+                45deg,
+                #3b2a5a,
+                #3b2a5a 40px,
+                #50368c 40px,
+                #50368c 80px
+            );
+        }
+
+        .menu-stripes {
+            background: repeating-linear-gradient(
+                -45deg,
+                #4c3b71,
+                #4c3b71 30px,
+                #2d1b4d 30px,
+                #2d1b4d 60px
+            );
+        }
+
+        .curtain {
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-origin: top;
+        }
+        .curtain-opened { transform: scaleY(0); }
+
+        .btn-bounce:active { transform: scale(0.95); }
+        
+        @keyframes confetti-fall {
+            0% { transform: translateY(-10vh) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(100vh) rotate(360deg); opacity: 0; }
+        }
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            animation: confetti-fall 3s linear forwards;
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        .gold-glow {
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+        }
+
+        /* Prevent text overflow in buttons */
+        .fit-text {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            word-break: break-word;
+            hyphens: auto;
+            line-height: 1.1;
+        }
+
+        #victory-cat {
+            max-width: 220px;
+            border-radius: 24px;
+            box-shadow: 0 0 40px rgba(255, 215, 0, 0.6);
+            border: 4px solid #facc15;
+        }
+    </style>
+</head>
+<body class="h-screen w-full flex items-center justify-center p-2 sm:p-4">
+
+    <div id="game-container" class="relative w-full max-w-3xl min-h-[500px] h-full max-h-[800px] bg-indigo-950 rounded-3xl border-8 border-yellow-500 overflow-hidden shadow-2xl flex flex-col">
+        
+        <!-- MAIN MENU -->
+        <div id="screen-menu" class="absolute inset-0 z-50 flex flex-col items-center justify-center text-center p-6 menu-stripes">
+            <h1 class="circus-font text-5xl md:text-8xl text-yellow-400 mb-2 drop-shadow-lg tracking-wider">WORD CIRCUS</h1>
+            <p class="text-lg md:text-2xl italic mb-10 text-white font-medium px-4">"Step right up! These words have TWO tricks!"</p>
+            
+            <div class="bg-red-600 px-6 py-4 md:px-8 md:py-5 rounded-3xl border-4 border-yellow-400 shadow-xl mb-12 transform -rotate-1">
+                <p class="circus-font text-xl md:text-3xl text-white uppercase">Earn up to £1.00 per show!</p>
+            </div>
+
+            <button onclick="startGame()" class="btn-bounce bg-yellow-400 hover:bg-yellow-300 text-red-700 circus-font text-3xl md:text-5xl px-12 py-4 md:px-16 md:py-5 rounded-full border-b-8 border-yellow-600 transition-all shadow-2xl">
+                START SHOW
+            </button>
+        </div>
+
+        <!-- GAME HUD -->
+        <div id="hud" class="hidden p-3 md:p-4 flex justify-between items-center bg-indigo-900 border-b-4 border-yellow-500 z-10">
+            <div class="flex flex-col">
+                <span class="text-[10px] uppercase opacity-70">Earnings</span>
+                <span id="display-money" class="text-yellow-400 font-bold text-lg md:text-xl">£0.00</span>
+            </div>
+            <div id="round-title" class="circus-font text-sm md:text-xl text-white uppercase tracking-widest">The Show</div>
+            <div class="flex flex-col items-end">
+                <span class="text-[10px] uppercase opacity-70">Score</span>
+                <span id="display-score" class="font-bold text-lg md:text-xl">0</span>
+            </div>
+        </div>
+
+        <!-- PROGRESS BAR -->
+        <div id="progress-container" class="hidden px-4 py-3 bg-indigo-900/50 z-10">
+            <div class="flex gap-1.5 h-2.5 md:h-3">
+                <!-- Progress dots -->
+            </div>
+        </div>
+
+        <!-- PLAY AREA -->
+        <div id="screen-play" class="hidden flex-1 flex flex-col p-4 relative overflow-hidden">
+            <!-- HEADLINE INSTRUCTION -->
+            <h2 class="circus-font text-xl md:text-2xl text-yellow-400 text-center mb-4 uppercase tracking-wide">Find ONE word that correctly matches BOTH clue boxes</h2>
+
+            <!-- Question Boxes -->
+            <div class="flex-1 flex gap-3 md:gap-4 items-center justify-center mb-4 min-h-0">
+                <!-- Box 1 -->
+                <div class="relative flex-1 h-full max-h-[180px] md:max-h-[220px] bg-red-900 rounded-2xl border-4 border-yellow-500/50 flex items-center justify-center p-3 md:p-5 text-center overflow-hidden shadow-inner">
+                    <div id="curtain-1" class="curtain absolute inset-0 bg-red-700 z-20 border-b-4 border-yellow-500"></div>
+                    <p id="box1-text" class="text-base sm:text-xl md:text-2xl lg:text-3xl font-bold leading-tight"></p>
+                </div>
+                <!-- Box 2 -->
+                <div class="relative flex-1 h-full max-h-[180px] md:max-h-[220px] bg-red-900 rounded-2xl border-4 border-yellow-500/50 flex items-center justify-center p-3 md:p-5 text-center overflow-hidden shadow-inner">
+                    <div id="curtain-2" class="curtain absolute inset-0 bg-red-700 z-20 border-b-4 border-yellow-500"></div>
+                    <p id="box2-text" class="text-base sm:text-xl md:text-2xl lg:text-3xl font-bold leading-tight"></p>
+                </div>
+            </div>
+
+            <!-- Feedback Message -->
+            <div id="feedback-area" class="h-14 md:h-16 flex items-center justify-center mb-3">
+                <p id="explanation" class="text-center italic text-yellow-200 text-sm md:text-base hidden px-2"></p>
+            </div>
+
+            <!-- Answers - Responsive Grid -->
+            <div id="options-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 md:gap-3 mb-4">
+                <!-- Buttons generated by JS -->
+            </div>
+
+            <!-- Footer Controls -->
+            <div class="flex justify-between items-center py-2">
+                <button id="skip-btn" onclick="skipQuestion()" class="text-gray-400 hover:text-white underline text-xs md:text-sm px-2">Skip Question</button>
+                <button id="next-btn" onclick="nextQuestion()" class="hidden bg-green-500 hover:bg-green-400 text-white circus-font px-6 md:px-8 py-2 md:py-3 rounded-xl border-b-4 border-green-700 shadow-lg text-sm md:text-base">Next ➜</button>
+            </div>
+        </div>
+
+        <!-- ROUND BREAK / GAME OVER -->
+        <div id="screen-results" class="hidden absolute inset-0 z-[60] bg-indigo-950/95 flex flex-col items-center justify-center p-8 text-center">
+            <h2 id="results-title" class="circus-font text-4xl md:text-5xl text-yellow-400 mb-6 drop-shadow-md">ROUND COMPLETE!</h2>
+            
+            <div id="results-icon-container" class="mb-6 h-[220px] flex items-center justify-center">
+                <!-- Default Icon -->
+                <div id="results-emoji" class="text-6xl md:text-8xl animate-bounce">🎪</div>
+                <!-- Dancing Cat (hidden by default) -->
+                <img id="victory-cat" src="./assets/images/cat_dance.gif" class="hidden mx-auto" alt="Victory Cat" onerror="this.classList.add('hidden'); document.getElementById('results-emoji').classList.remove('hidden');">
+            </div>
+
+            <p id="results-text" class="text-xl md:text-2xl mb-10 leading-relaxed"></p>
+            <button id="results-btn" onclick="continueGame()" class="btn-bounce bg-yellow-400 text-red-700 circus-font text-2xl md:text-3xl px-10 py-3 md:px-12 md:py-4 rounded-full border-b-8 border-yellow-600 shadow-2xl uppercase">
+                Next Round
+            </button>
+        </div>
+
+    </div>
+
+    <script>
+        // --- AUDIO ENGINE: WAV VERSION (GITHUB PATHS) ---
+        const AUDIO_FILES = {
+            click: './assets/sounds/click.wav',
+            reveal: './assets/sounds/reveal.wav',
+            correct: './assets/sounds/correct.wav',
+            wrong: './assets/sounds/wrong.wav',
+            coin: './assets/sounds/coin.wav',
+            victory: './assets/sounds/victory.wav'
+        };
+
+        const audioObjects = {};
+        
+        Object.keys(AUDIO_FILES).forEach(key => {
+            audioObjects[key] = new Audio(AUDIO_FILES[key]);
+            audioObjects[key].load();
+        });
+
+        function playSound(key) {
+            const sound = audioObjects[key];
+            if (sound) {
+                sound.currentTime = 0;
+                sound.play().catch(e => {
+                    console.log("Audio awaiting for interaction.");
+                });
+            }
+        }
+
+        const ALL_QUESTIONS = [
+            { "id": 1, "box1": "Done, finished", "box2": "Cricketing term", "options": ["over","complete","wicket","century","ball"], "correct": "over", "explanation": "An over means something is finished — and it's also a cricket term in the game!" },
+            { "id": 2, "box1": "Domestic animal", "box2": "Stroke, pat", "options": ["cat","rabbit","fondle","pet","dog"], "correct": "pet", "explanation": "A pet is an animal — and to pet something means to stroke it." },
+            { "id": 3, "box1": "Fast, swift", "box2": "Intelligent, sharp", "options": ["quick","rapid","clever","bright","cool"], "correct": "quick", "explanation": "Quick can mean fast — and also clever or sharp-minded!" },
+            { "id": 4, "box1": "A colour", "box2": "Dull, nondescript", "options": ["blue","yellow","black","grey","brown"], "correct": "grey", "explanation": "Grey is a colour — and something plain or dull can also be described as grey." },
+            { "id": 5, "box1": "Male sheep", "box2": "Pack, stuff", "options": ["ram","ewe","thrust","crash","strike"], "correct": "ram", "explanation": "A ram is a male sheep — and to ram something means to force or pack it in." },
+            { "id": 6, "box1": "Road, path", "box2": "Method, style", "options": ["track","way","route","distance","manner"], "correct": "way", "explanation": "A way can be a path — and it can also mean a method of doing something." },
+            { "id": 7, "box1": "Pale, faint", "box2": "Lamp, lantern", "options": ["torch","soft","gentle","light","candle"], "correct": "light", "explanation": "Light can mean pale — and it’s also what lamps and lanterns give." },
+            { "id": 8, "box1": "Long for, miss", "box2": "Evergreen tree", "options": ["fir","yew","pine","yearn","ache"], "correct": "pine", "explanation": "To pine means to miss someone — and a pine is also an evergreen tree." },
+            { "id": 9, "box1": "Slapdash, lax", "box2": "Limp, loose", "options": ["sagging","slack","slow","negligent","careless"], "correct": "slack", "explanation": "Slack can mean careless — and it can also describe something loose or limp." },
+            { "id": 10, "box1": "Air movement", "box2": "Twist, turn", "options": ["current","air","wind","loop","snake"], "correct": "wind", "explanation": "Wind is moving air — and to wind something means to twist or turn it." },
+            { "id": 11, "box1": "Excellent, very good", "box2": "Enormous, vast", "options": ["large","huge","great","wonderful","fat"], "correct": "great", "explanation": "Great can mean excellent — and it can also mean very large." },
+            { "id": 12, "box1": "Unripe, grassy", "box2": "A colour", "options": ["green","blue","yellow","apple","white"], "correct": "green", "explanation": "Green fruit is unripe — and green is also a colour." },
+            { "id": 13, "box1": "Sphere, game component", "box2": "Dance, smart party", "options": ["cone","rule","ball","disco","game"], "correct": "ball", "explanation": "A ball is round — and a ball is also a formal dance party." },
+            { "id": 14, "box1": "Just, honest", "box2": "Fine, sunny", "options": ["bright","fair","impartial","clear","cloudless"], "correct": "fair", "explanation": "Fair means honest — and fair weather means fine and sunny." },
+            { "id": 15, "box1": "Edge, border", "box2": "Team, club", "options": ["squad","fringe","rim","boundary","side"], "correct": "side", "explanation": "A side can mean an edge — and it can also mean a sports team." },
+            { "id": 16, "box1": "Group, gang", "box2": "Strip, belt", "options": ["stripe","crowd","crew","band","ring"], "correct": "band", "explanation": "A band can be a group — and it can also be a strip or belt." },
+            { "id": 17, "box1": "Stroll, wander", "box2": "Pace, stride", "options": ["walk","stagger","toddle","wonder","move"], "correct": "walk", "explanation": "Walk can mean to stroll — and it can also refer to someone's pace or stride." },
+            { "id": 18, "box1": "Breaker, surf", "box2": "Signal, beckon", "options": ["flood","ripple","flap","current","wave"], "correct": "wave", "explanation": "A wave is ocean surf — and to wave is to signal or beckon." },
+            { "id": 19, "box1": "Receive, take", "box2": "Agree to, allow", "options": ["gain","obtain","believe","accept","approve"], "correct": "accept", "explanation": "Accept means to receive something — and it also means to agree to it." },
+            { "id": 20, "box1": "Dwelling, home", "box2": "Lecture, talk to", "options": ["house","address","location","speech","settle"], "correct": "address", "explanation": "An address is where you live — and to address someone means to speak to them." },
+            { "id": 21, "box1": "Depart, migrate", "box2": "Touch, affect", "options": ["advance","impress","move","proceed","motivate"], "correct": "move", "explanation": "Move can mean to leave — and it can also mean to affect someone emotionally." },
+            { "id": 22, "box1": "Condemn, attack", "box2": "Plague, burden", "options": ["disaster","ordeal","spell","curse","swear"], "correct": "curse", "explanation": "To curse is to attack with angry words — and a curse can also be a burden." },
+            { "id": 23, "box1": "Bathe, swim", "box2": "Decline, descend", "options": ["drop","dip","drench","damp","deck"], "correct": "dip", "explanation": "You can dip in water — and prices or numbers can dip downward too." },
+            { "id": 24, "box1": "Protect, shelter", "box2": "Lid, roof", "options": ["top","blanket","safe","cover","box"], "correct": "cover", "explanation": "To cover is to protect or shelter — and a cover is also a lid or roof." },
+            { "id": 25, "box1": "Unfriendly, hostile", "box2": "Foreign, different", "options": ["enemy","alien","abroad","separate","unusual"], "correct": "alien", "explanation": "Alien can mean unfriendly or hostile — and it also means foreign or different." },
+            { "id": 26, "box1": "Finish, end", "box2": "Whole, undivided", "options": ["achieved","all","total","close","complete"], "correct": "complete", "explanation": "Complete means finished — and something complete is whole and undivided." },
+            { "id": 27, "box1": "Goodwill, kindness", "box2": "Approval, prefer", "options": ["like","favour","service","back","spoil"], "correct": "favour", "explanation": "Favour can mean kindness — and to favour something means to prefer or approve it." },
+            { "id": 28, "box1": "Outburst, row", "box2": "Place, site", "options": ["circumstances","location","outlook","scene","tantrum"], "correct": "scene", "explanation": "A scene can mean a noisy outburst — and it can also mean a place or setting." },
+            { "id": 29, "box1": "Answer, explanation", "box2": "Liquid, mixture", "options": ["key","response","blend","solution","settle"], "correct": "solution", "explanation": "A solution can be an answer — and it can also be a liquid mixture." },
+            { "id": 30, "box1": "Register, file", "box2": "Achievement, personal best", "options": ["account","record","report","track","performance"], "correct": "record", "explanation": "To record is to register something — and a record can be an achievement." },
+            { "id": 31, "box1": "Issue, concern", "box2": "Important, count", "options": ["subject","event","matter","stuff","worry"], "correct": "matter", "explanation": "A matter is an issue — and to matter means to be important." },
+            { "id": 32, "box1": "Rub, scrape", "box2": "Bars, fireplace", "options": ["burn","fuel","grind","grate","scratch"], "correct": "grate", "explanation": "To grate is to scrape — and a grate is the metal bars of a fireplace." },
+            { "id": 33, "box1": "Quick, brisk", "box2": "Cross, irritable", "options": ["hasty","lively","sluggish","snappy","snarling"], "correct": "snappy", "explanation": "Snappy can mean quick — and it can also mean cross or irritable." },
+            { "id": 34, "box1": "Ruin, damage", "box2": "Overprotect, pamper", "options": ["ignore","indulge","baby","spoil","destroy"], "correct": "spoil", "explanation": "To spoil is to ruin something — and you can also spoil someone by overpampering them." },
+            { "id": 35, "box1": "Quite, rather", "box2": "Honestly, legally", "options": ["really","fully","fairly","justly","properly"], "correct": "fairly", "explanation": "Fairly can mean quite — and it can also mean honestly or justly." },
+            { "id": 36, "box1": "Farmland, rural", "box2": "Nation, state", "options": ["kingdom","people","landscape","outdoors","country"], "correct": "country", "explanation": "Country can mean rural land — and it also means a nation." },
+            { "id": 37, "box1": "Puzzle, think", "box2": "Marvel, miracle", "options": ["question","excellent","wonder","wonderful","speculate"], "correct": "wonder", "explanation": "To wonder is to think deeply — and a wonder is something amazing." },
+            { "id": 38, "box1": "Give, hand", "box2": "Succeed, qualify", "options": ["transfer","allow","past","pass","graduate"], "correct": "pass", "explanation": "To pass can mean to hand something over — and it also means to succeed." },
+            { "id": 39, "box1": "Ailment, disorder", "box2": "Criticism, moan", "options": ["charge","disease","grumble","groan","complaint"], "correct": "complaint", "explanation": "A complaint can mean an illness — and it can also mean a criticism." },
+            { "id": 40, "box1": "Angry, fuming", "box2": "Devoted, keen", "options": ["furious","sensible","mad","enthusiastic","irrational"], "correct": "mad", "explanation": "Mad can mean angry — and it can also mean very keen or enthusiastic about something." },
+            { "id": 41, "box1": "Damp, soaked", "box2": "Weak, soppy", "options": ["soft","dry","strong","wet","humid"], "correct": "wet", "explanation": "Wet means soaked — and something weak or soppy can also be described as wet." },
+            { "id": 42, "box1": "Refuse, reject", "box2": "Dwindle, flag", "options": ["decrease","decay","degenerate","decline","deteriorate"], "correct": "decline", "explanation": "To decline is to refuse — and it also means to decrease or fade away." },
+            { "id": 43, "box1": "Fast, brisk", "box2": "Clever, sharp", "options": ["quick","sluggish","ready","sudden","intelligent"], "correct": "quick", "explanation": "Quick means fast — and it can also mean clever or sharp." },
+            { "id": 44, "box1": "Thing, article", "box2": "Argue, protest", "options": ["oppose","motive","objective","object","item"], "correct": "object", "explanation": "An object is a thing — and to object means to argue or protest." },
+            { "id": 45, "box1": "Blaze, heat", "box2": "Shoot, explode", "options": ["electrify","inspire","dismiss","sparkle","fire"], "correct": "fire", "explanation": "Fire is a blaze — and to fire means to shoot." },
+            { "id": 46, "box1": "Murmur, sigh", "box2": "Hint, gossip", "options": ["breathe","divulge","whisper","whistle","suggestion"], "correct": "whisper", "explanation": "To whisper is to murmur — and a whisper can also be a hint or piece of gossip." },
+            { "id": 47, "box1": "Cost, amount", "box2": "Consequences, sacrifice", "options": ["charge","expense","penalty","outlay","price"], "correct": "price", "explanation": "A price is a cost — and the price of something can mean the consequences." },
+            { "id": 48, "box1": "Pause, stop", "box2": "Destroy, ruin", "options": ["rest","shatter","break","demolish","crack"], "correct": "break", "explanation": "To break is to pause — and to break something is to ruin it." },
+            { "id": 49, "box1": "Request, plea", "box2": "Fascinate, musician", "options": ["prayer","charm","interest","appeal","attract"], "correct": "appeal", "explanation": "An appeal is a request — and to appeal means to attract or tempt." },
+            { "id": 50, "box1": "Smash, break", "box2": "Overpower, overcome", "options": ["crunch","crush","crusade","grind","cause"], "correct": "crush", "explanation": "To crush is to smash something — and you can also crush an opponent by overpowering them." },
+            { "id": 51, "box1": "Jump, leap", "box2": "Cellar, tomb", "options": ["bound","spring","cavern","chamber","vault"], "correct": "vault", "explanation": "To vault is to leap — and a vault can also be a cellar or tomb." },
+            { "id": 52, "box1": "Growth, advance", "box2": "Event, situation", "options": ["result","outcome","development","expansion","improvement"], "correct": "development", "explanation": "Development means growth — and it can also mean an event or situation unfolding." },
+            { "id": 53, "box1": "Closing, final", "box2": "Continue, remain", "options": ["stay","fade","latest","extreme","last"], "correct": "last", "explanation": "Last can mean final — and to last means to continue or remain." },
+            { "id": 54, "box1": "Talk, presentation", "box2": "Language, words", "options": ["voice","letter","speech","performance","audience"], "correct": "speech", "explanation": "A speech is a talk — and speech also means language." },
+            { "id": 55, "box1": "Freezing, chilly", "box2": "Sour, acidic", "options": ["winter","cold","ice","bitter","tart"], "correct": "bitter", "explanation": "Bitter can describe freezing weather — and it can also mean sour in taste." },
+            { "id": 56, "box1": "Carry, support", "box2": "Tolerate, endure", "options": ["lift","accept","bear","withstand","hold"], "correct": "bear", "explanation": "To bear means to carry — and it also means to endure something." },
+            { "id": 57, "box1": "Shoot, discharge", "box2": "Flame, blaze", "options": ["fire","aim","explode","burn","gun"], "correct": "fire", "explanation": "To fire is to shoot — and fire is also a flame." },
+            { "id": 58, "box1": "Spy, infiltrator", "box2": "Vole, rat", "options": ["agent","mole","detective","mouse","observe"], "correct": "mole", "explanation": "A mole can be a spy — and it’s also a small animal like a vole." },
+            { "id": 59, "box1": "Fight, punch", "box2": "Container, cuboid", "options": ["hit","box","beat","vessel","cube"], "correct": "box", "explanation": "To box is to fight — and a box is a container." },
+            { "id": 60, "box1": "Counter, desk", "box2": "Chart, graph", "options": ["plot","worktop","diagram","data","table"], "correct": "table", "explanation": "A table can be a desk — and it can also show data in a chart." },
+            { "id": 61, "box1": "Day, month", "box2": "Meeting, appointment", "options": ["year","engagement","date","calendar","conference"], "correct": "date", "explanation": "A date can mean a day — and it can also mean an appointment." },
+            { "id": 62, "box1": "Clock, timepiece", "box2": "Observe, see", "options": ["watch","notice","stopwatch","witness","timer"], "correct": "watch", "explanation": "A watch tells time — and to watch means to observe." },
+            { "id": 63, "box1": "Hoist, winch", "box2": "Stork, flamingo", "options": ["lift","pelican","crane","pulley","crank"], "correct": "crane", "explanation": "A crane can lift things — and a crane is also a tall bird." },
+            { "id": 64, "box1": "Shine, buff", "box2": "Perfect, refine", "options": ["varnish","polish","improve","enhance","ideal"], "correct": "polish", "explanation": "To polish is to shine something — and to polish also means to improve it." },
+            { "id": 65, "box1": "Limit, restrict", "box2": "Cover, top", "options": ["cap","bound","curtail","crown","curb"], "correct": "cap", "explanation": "To cap something can mean to limit it — and a cap is also something worn on top." },
+            { "id": 66, "box1": "Push, squeeze", "box2": "Urge, compel", "options": ["impel","crush","drive","long","press"], "correct": "press", "explanation": "To press is to push — and to press someone is to urge them." },
+            { "id": 67, "box1": "Gesture, signal", "box2": "Proposal, suggestion", "options": ["sign","idea","motion","concept","movement"], "correct": "motion", "explanation": "A motion can be a gesture — and it can also mean a formal proposal." },
+            { "id": 68, "box1": "Remove, take", "box2": "Excerpt, passage", "options": ["snippet","quotation","extract","remove","accept"], "correct": "extract", "explanation": "To extract is to remove — and an extract is a short passage from a text." },
+            { "id": 69, "box1": "Transport, move", "box2": "Boat, ferry", "options": ["load","shift","ship","lift","freight"], "correct": "ship", "explanation": "To ship means to transport — and a ship is also a boat." },
+            { "id": 70, "box1": "Transparent, see-through", "box2": "Obvious, explicit", "options": ["light","pale","evident","sight","clear"], "correct": "clear", "explanation": "Clear can mean see-through — and it can also mean obvious." },
+            { "id": 71, "box1": "Crushed, powdered", "box2": "Floor, earth", "options": ["soil","ground","base","grated","mixture"], "correct": "ground", "explanation": "Ground can mean crushed — and it also means the earth or floor." },
+            { "id": 72, "box1": "Payment, instalment", "box2": "Put, place", "options": ["sum","position","deposit","amount","balance"], "correct": "deposit", "explanation": "A deposit is a payment — and to deposit means to place something somewhere." }
+        ];
+
+        let state = {
+            sessionQuestions: [],
+            missedQuestions: [],
+            currentIndex: 0,
+            score: 0,
+            money: 0,
+            round: 1,
+            isBonusRound: false,
+            canAnswer: false
+        };
+
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function speakText(text) {
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            const voices = window.speechSynthesis.getVoices();
+            const preferredVoices = [
+                'Google UK English Female',
+                'Samantha',
+                'Microsoft Hazel Online (Natural)',
+                'Microsoft Susan Online (Natural)',
+                'Microsoft Zira',
+                'Victoria',
+                'Google US English'
+            ];
+            let selectedVoice = null;
+            for (let name of preferredVoices) {
+                selectedVoice = voices.find(v => v.name.includes(name));
+                if (selectedVoice) break;
+            }
+            if (!selectedVoice) selectedVoice = voices.find(v => v.name.toLowerCase().includes('female'));
+            if (!selectedVoice) selectedVoice = voices.find(v => v.lang.startsWith('en-GB') || v.lang.startsWith('en-US'));
+            if (selectedVoice) utterance.voice = selectedVoice;
+            utterance.pitch = 1.15;
+            utterance.rate = 1.0;
+            window.speechSynthesis.speak(utterance);
+        }
+
+        window.speechSynthesis.onvoiceschanged = () => {
+            window.speechSynthesis.getVoices();
+        };
+
+        function startGame() {
+            playSound('click');
+            document.getElementById('screen-menu').style.display = 'none';
+            document.getElementById('hud').style.display = 'flex';
+            document.getElementById('progress-container').style.display = 'block';
+            document.getElementById('screen-play').style.display = 'flex';
+            
+            // Randomize and pick exactly 10 questions for a shorter session
+            const shuffled = shuffle([...ALL_QUESTIONS]);
+            state.sessionQuestions = shuffled.slice(0, 10);
+            
+            initRound();
+        }
+
+        function initRound() {
+            state.currentIndex = (state.round - 1) * 10;
+            updateHUD();
+            renderProgressBar();
+            loadQuestion();
+        }
+
+        function updateHUD() {
+            document.getElementById('display-score').innerText = state.score;
+            document.getElementById('display-money').innerText = `£${state.money.toFixed(2)}`;
+            document.getElementById('round-title').innerText = state.isBonusRound ? "Bonus Encore" : `The Show`;
+        }
+
+        function renderProgressBar() {
+            const container = document.querySelector('#progress-container div');
+            container.innerHTML = '';
+            // Always use 10 dots for the progress bar
+            const totalInBar = state.isBonusRound ? state.missedQuestions.length : 10;
+            const currentOffset = state.isBonusRound ? state.currentIndex : (state.currentIndex % 10);
+
+            for (let i = 0; i < totalInBar; i++) {
+                const dot = document.createElement('div');
+                const isCompleted = i < currentOffset;
+                const isCurrent = i === currentOffset;
+                dot.className = `flex-1 rounded-full border border-yellow-500/30 transition-all duration-300 ${isCompleted || isCurrent ? 'bg-yellow-400 shadow-[0_0_10px_rgba(250,204,21,0.5)]' : 'bg-indigo-950'}`;
+                container.appendChild(dot);
+            }
+        }
+
+        function loadQuestion() {
+            const qSet = state.isBonusRound ? state.missedQuestions : state.sessionQuestions;
+            const q = qSet[state.currentIndex];
+            
+            if (!q) return showGameOver();
+
+            state.canAnswer = false;
+
+            const c1 = document.getElementById('curtain-1');
+            const c2 = document.getElementById('curtain-2');
+            c1.classList.remove('curtain-opened');
+            c2.classList.remove('curtain-opened');
+            
+            document.getElementById('explanation').classList.add('hidden');
+            document.getElementById('next-btn').classList.add('hidden');
+            document.getElementById('skip-btn').style.visibility = 'visible';
+
+            setTimeout(() => {
+                document.getElementById('box1-text').innerText = q.box1;
+                document.getElementById('box2-text').innerText = q.box2;
+                
+                playSound('reveal');
+                
+                c1.classList.add('curtain-opened');
+                setTimeout(() => {
+                    c2.classList.add('curtain-opened');
+                    state.canAnswer = true;
+                }, 300);
+            }, 400);
+
+            const optionsGrid = document.getElementById('options-grid');
+            optionsGrid.innerHTML = '';
+            
+            const shuffledOptions = shuffle([...q.options]);
+            
+            shuffledOptions.forEach(opt => {
+                const btn = document.createElement('button');
+                
+                let fontSizeClass = "text-sm sm:text-base md:text-xl";
+                if (opt.length > 8) fontSizeClass = "text-[10px] sm:text-xs md:text-sm lg:text-base";
+                else if (opt.length > 6) fontSizeClass = "text-xs sm:text-sm md:text-lg";
+
+                btn.className = `btn-bounce fit-text bg-indigo-800 hover:bg-indigo-700 h-16 sm:h-20 px-2 rounded-2xl border-b-4 border-indigo-950 circus-font ${fontSizeClass} transition-all shadow-lg text-white leading-none`;
+                btn.innerText = opt;
+                btn.onclick = () => {
+                    playSound('click');
+                    handleAnswer(opt, btn);
+                };
+                optionsGrid.appendChild(btn);
+            });
+        }
+
+        function handleAnswer(choice, btn) {
+            if (!state.canAnswer) return;
+            state.canAnswer = false;
+
+            const qSet = state.isBonusRound ? state.missedQuestions : state.sessionQuestions;
+            const q = qSet[state.currentIndex];
+            const isCorrect = choice === q.correct;
+
+            document.getElementById('skip-btn').style.visibility = 'hidden';
+
+            if (isCorrect) {
+                playSound('correct');
+                btn.classList.remove('bg-indigo-800', 'border-indigo-950');
+                btn.classList.add('bg-green-500', 'border-green-700', 'gold-glow');
+                const points = state.isBonusRound ? 0.5 : 1;
+                state.score += points;
+                // Reward logic: £0.10 per correct answer = £1.00 for a perfect show
+                state.money += points * 0.10;
+                
+                setTimeout(() => playSound('coin'), 300);
+                
+                createConfetti();
+                showFeedback(q.explanation);
+                setTimeout(() => nextQuestion(), 1500);
+            } else {
+                playSound('wrong');
+                btn.classList.add('bg-red-500', 'border-red-700');
+                
+                speakText(q.explanation);
+
+                const buttons = document.querySelectorAll('#options-grid button');
+                buttons.forEach(b => {
+                    if (b.innerText === q.correct) {
+                        b.classList.add('bg-green-500', 'border-green-700', 'scale-105');
+                    }
+                });
+                if (!state.isBonusRound && !state.missedQuestions.find(mq => mq.id === q.id)) {
+                    state.missedQuestions.push(q);
+                }
+                showFeedback(q.explanation);
+                document.getElementById('next-btn').classList.remove('hidden');
+            }
+            updateHUD();
+        }
+
+        function skipQuestion() {
+            if (!state.canAnswer) return;
+            playSound('click');
+            const qSet = state.isBonusRound ? state.missedQuestions : state.sessionQuestions;
+            const q = qSet[state.currentIndex];
+            if (!state.isBonusRound && !state.missedQuestions.find(mq => mq.id === q.id)) {
+                state.missedQuestions.push(q);
+            }
+            nextQuestion();
+        }
+
+        function showFeedback(text) {
+            const exp = document.getElementById('explanation');
+            exp.innerText = text;
+            exp.classList.remove('hidden');
+        }
+
+        function nextQuestion() {
+            const qSet = state.isBonusRound ? state.missedQuestions : state.sessionQuestions;
+            state.currentIndex++;
+            
+            if (!state.isBonusRound && state.currentIndex % 10 === 0) {
+                showRoundResults();
+            } else if (state.isBonusRound && state.currentIndex >= state.missedQuestions.length) {
+                showGameOver();
+            } else {
+                renderProgressBar();
+                loadQuestion();
+            }
+        }
+
+        function showRoundResults() {
+            const screen = document.getElementById('screen-results');
+            const title = document.getElementById('results-title');
+            const text = document.getElementById('results-text');
+            const btn = document.getElementById('results-btn');
+            const emoji = document.getElementById('results-emoji');
+            const cat = document.getElementById('victory-cat');
+
+            title.innerText = `SHOW COMPLETE!`;
+            text.innerHTML = `Great performance! You've earned <strong>£${state.money.toFixed(2)}</strong> so far.<br>Let's see if there's an encore...`;
+            
+            // Only 1 round of 10 questions now
+            state.round++;
+            if (state.round > 1) { 
+                if (state.missedQuestions.length > 0) {
+                    title.innerText = "THE ENCORE!";
+                    emoji.innerText = "⭐";
+                    emoji.classList.remove('hidden');
+                    cat.classList.add('hidden');
+                    text.innerHTML = `You missed ${state.missedQuestions.length} tricks.<br>Try them again for <strong>HALF POINTS</strong>!`;
+                    btn.innerText = "START ENCORE";
+                    state.isBonusRound = true;
+                } else {
+                    showGameOver();
+                    return;
+                }
+            } else {
+                btn.innerText = "START NEXT ACT";
+            }
+            screen.style.display = 'flex';
+        }
+
+        function continueGame() {
+            playSound('click');
+            document.getElementById('screen-results').style.display = 'none';
+            if (state.isBonusRound && state.currentIndex >= state.missedQuestions.length) {
+                state.currentIndex = 0;
+            }
+            if (state.isBonusRound && state.currentIndex === 0) {
+                updateHUD();
+                renderProgressBar();
+                loadQuestion();
+            } else {
+                initRound();
+            }
+        }
+
+        function showGameOver() {
+            const screen = document.getElementById('screen-results');
+            const title = document.getElementById('results-title');
+            const text = document.getElementById('results-text');
+            const btn = document.getElementById('results-btn');
+            const emoji = document.getElementById('results-emoji');
+            const cat = document.getElementById('victory-cat');
+
+            // Celebration Audio & Visuals
+            playSound('victory');
+            emoji.classList.add('hidden');
+            cat.classList.remove('hidden');
+
+            title.innerText = "GRAND FINALE!";
+            text.innerHTML = `What a performance!<br>Final Score: ${state.score}<br><span class="text-4xl md:text-5xl text-yellow-400 circus-font mt-4 block uppercase">TOTAL EARNED: £${state.money.toFixed(2)}</span>`;
+            btn.innerText = "PLAY NEW SHOW";
+            btn.onclick = () => {
+                playSound('click');
+                location.reload();
+            };
+            screen.style.display = 'flex';
+        }
+
+        function createConfetti() {
+            for (let i = 0; i < 40; i++) {
+                const c = document.createElement('div');
+                c.className = 'confetti';
+                c.style.left = Math.random() * 100 + 'vw';
+                c.style.backgroundColor = ['#fbbf24', '#ef4444', '#3b82f6', '#10b981', '#ffffff'][Math.floor(Math.random() * 5)];
+                c.style.width = (Math.random() * 8 + 4) + 'px';
+                c.style.height = (Math.random() * 8 + 4) + 'px';
+                c.style.animationDuration = (Math.random() * 2 + 1) + 's';
+                c.style.transform = `rotate(${Math.random() * 360}deg)`;
+                document.body.appendChild(c);
+                setTimeout(() => c.remove(), 3000);
+            }
+        }
+    </script>
+</body>
+</html>
